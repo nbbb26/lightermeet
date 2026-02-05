@@ -42,13 +42,16 @@ function getCacheKey(text: string, targetLang: string): string {
 }
 
 /**
- * Translate text using GPT-5.2-nano (fast model)
+ * Translate text using GPT-5.2-nano (fast model) with retry logic
  */
 export async function translateText(
   text: string,
   targetLanguage: LanguageCode,
-  sourceLanguage?: LanguageCode
+  sourceLanguage?: LanguageCode,
+  retryCount = 0
 ): Promise<TranslationResult> {
+  const MAX_RETRIES = 2;
+  
   // Skip translation if source and target are the same
   if (sourceLanguage === targetLanguage) {
     return { translatedText: text, detectedLanguage: sourceLanguage };
@@ -61,6 +64,11 @@ export async function translateText(
     return { translatedText: cached, cached: true };
   }
 
+  // Validate API key
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
@@ -68,30 +76,54 @@ export async function translateText(
   const targetLangName = SUPPORTED_LANGUAGES[targetLanguage];
   const sourceLangName = sourceLanguage ? SUPPORTED_LANGUAGES[sourceLanguage] : 'the original language';
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-5.2-nano', // Fast, cheap model for translation
-    messages: [
-      {
-        role: 'system',
-        content: `You are a translator. Translate the following text from ${sourceLangName} to ${targetLangName}. 
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-5.2-nano', // Fast, cheap model for translation
+      messages: [
+        {
+          role: 'system',
+          content: `You are a translator. Translate the following text from ${sourceLangName} to ${targetLangName}. 
 Only output the translation, nothing else. Preserve formatting, emojis, and tone.
 If the text is already in the target language, return it unchanged.`,
-      },
-      {
-        role: 'user',
-        content: text,
-      },
-    ],
-    max_tokens: 500,
-    temperature: 0.1, // Low temperature for consistent translations
-  });
+        },
+        {
+          role: 'user',
+          content: text,
+        },
+      ],
+      max_tokens: 500,
+      temperature: 0.1, // Low temperature for consistent translations
+    });
 
-  const translatedText = response.choices[0]?.message?.content?.trim() || text;
+    const translatedText = response.choices[0]?.message?.content?.trim();
+    
+    if (!translatedText) {
+      throw new Error('Empty response from translation API');
+    }
 
-  // Cache the result
-  translationCache.set(cacheKey, translatedText);
+    // Cache the result
+    translationCache.set(cacheKey, translatedText);
 
-  return { translatedText };
+    return { translatedText };
+  } catch (error) {
+    // Retry on network errors or rate limits
+    if (retryCount < MAX_RETRIES) {
+      const isRetryable = error instanceof Error && (
+        error.message.includes('rate limit') ||
+        error.message.includes('timeout') ||
+        error.message.includes('network')
+      );
+      
+      if (isRetryable) {
+        const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return translateText(text, targetLanguage, sourceLanguage, retryCount + 1);
+      }
+    }
+    
+    // If all retries failed or non-retryable error, throw
+    throw error;
+  }
 }
 
 /**

@@ -6,9 +6,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { text, targetLanguage, targetLanguages, sourceLanguage } = body;
 
-    if (!text) {
+    if (!text || typeof text !== 'string') {
       return NextResponse.json(
-        { error: 'Missing required field: text' },
+        { error: 'Missing or invalid required field: text' },
+        { status: 400 }
+      );
+    }
+
+    if (text.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Text cannot be empty' },
+        { status: 400 }
+      );
+    }
+
+    if (text.length > 5000) {
+      return NextResponse.json(
+        { error: 'Text exceeds maximum length of 5000 characters' },
         { status: 400 }
       );
     }

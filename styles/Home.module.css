@@ -7,12 +7,25 @@
   justify-items: center;
   overflow: auto;
   flex-grow: 1;
+  padding: 2rem 1rem;
+}
+
+@media (max-width: 600px) {
+  .main {
+    padding: 1rem 0.5rem;
+  }
 }
 
 .tabContainer {
   width: 100%;
   max-width: 500px;
   padding-inline: 2rem;
+}
+
+@media (max-width: 600px) {
+  .tabContainer {
+    padding-inline: 1rem;
+  }
 }
 
 .tabSelect {
@@ -37,4 +50,11 @@
   padding: 1.5rem;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 600px) {
+  .tabContent {
+    padding: 1rem;
+  }
 }
