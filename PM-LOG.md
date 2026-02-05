@@ -71,13 +71,25 @@ Multiple improvements across the app:
 ### Build Status
 ✅ Build passes successfully
 
-### Testing Notes
-- Browser testing was limited due to tool issues
-- Visual testing recommended on:
-  - Desktop Chrome/Firefox/Safari
-  - Mobile Safari (iPhone)
-  - Mobile Chrome (Android)
-  - Various viewport sizes (375px, 768px, 1440px)
+### Testing Results
+
+**Automated Testing (Headless Browser):**
+- ✅ Homepage loads with dark theme
+- ✅ Pre-join screen renders correctly (desktop)
+- ✅ Pre-join screen responsive (mobile 375px)
+- ✅ Language selector visible and styled
+- ⚠️ Cannot test actual video call features (requires WebRTC)
+
+**Screenshots saved to:** `/tmp/lightermeet-test/`
+- `homepage.png` - Landing page
+- `prejoin.png` - Pre-join screen (desktop)
+- `prejoin-mobile.png` - Pre-join screen (mobile)
+
+**Manual Testing Recommended:**
+- Mobile Safari (iPhone): Test chat overlay transparency
+- Mobile Chrome (Android): Test chat overlay
+- Desktop browsers: Test self-video PIP when 2+ participants
+- Various viewport sizes: 375px, 768px, 1440px
 
 ### Next Steps
 1. Test on actual devices
