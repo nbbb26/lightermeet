@@ -1,35 +1,25 @@
-<a href="https://livekit.io/">
-  <img src="./.github/assets/livekit-mark.png" alt="LiveKit logo" width="100" height="100">
-</a>
+# LighterMeet
 
-# LiveKit Meet
+Simple, open-source video conferencing built with [LiveKit](https://livekit.io) and Next.js.
 
-<p>
-  <a href="https://meet.livekit.io"><strong>Try the demo</strong></a>
-  •
-  <a href="https://github.com/livekit/components-js">LiveKit Components</a>
-  •
-  <a href="https://docs.livekit.io/">LiveKit Docs</a>
-  •
-  <a href="https://livekit.io/cloud">LiveKit Cloud</a>
-  •
-  <a href="https://blog.livekit.io/">Blog</a>
-</p>
+## Features
 
-<br>
-
-LiveKit Meet is an open source video conferencing app built on [LiveKit Components](https://github.com/livekit/components-js), [LiveKit Cloud](https://cloud.livekit.io/), and Next.js. It's been completely redesigned from the ground up using our new components library.
-
-![LiveKit Meet screenshot](./.github/assets/livekit-meet.jpg)
+- 🎥 High-quality video conferencing
+- 🔒 End-to-end encryption support
+- 🌐 Real-time translation (powered by OpenAI Whisper + GPT)
+- 📱 Mobile-friendly responsive design
+- 🚀 Deployed on Vercel
 
 ## Tech Stack
 
-- This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
-- App is built with [@livekit/components-react](https://github.com/livekit/components-js/) library.
+- [Next.js](https://nextjs.org/) - React framework
+- [@livekit/components-react](https://github.com/livekit/components-js/) - LiveKit UI components
+- [LiveKit Cloud](https://cloud.livekit.io/) - WebRTC infrastructure
+- [OpenAI API](https://openai.com) - Real-time translation
 
 ## Demo
 
-Give it a try at https://meet.livekit.io.
+Visit [https://lightermeet.vercel.app](https://lightermeet.vercel.app)
 
 ## Dev Setup
 
@@ -38,5 +28,18 @@ Steps to get a local dev setup up and running:
 1. Run `pnpm install` to install all dependencies.
 2. Copy `.env.example` in the project root and rename it to `.env.local`.
 3. Update the missing environment variables in the newly created `.env.local` file.
-4. Run `pnpm dev` to start the development server and visit [http://localhost:3000](http://localhost:3000) to see the result.
+4. Run `pnpm dev` to start the development server and visit [http://localhost:3000](http://localhost:3000).
 5. Start development 🎉
+
+## Environment Variables
+
+Required environment variables (see `.env.example`):
+
+- `LIVEKIT_API_KEY` - Your LiveKit API key
+- `LIVEKIT_API_SECRET` - Your LiveKit API secret
+- `LIVEKIT_URL` - Your LiveKit server URL
+- `OPENAI_API_KEY` - OpenAI API key for translation features
+
+## License
+
+Based on [LiveKit Meet](https://github.com/livekit/meet) - Apache 2.0 License

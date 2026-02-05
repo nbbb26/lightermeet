@@ -6,27 +6,27 @@ import { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: {
-    default: 'LiveKit Meet | Conference app build with LiveKit open source',
+    default: 'LighterMeet | Simple Video Conferencing',
     template: '%s',
   },
   description:
-    'LiveKit is an open source WebRTC project that gives you everything needed to build scalable and real-time audio and/or video experiences in your applications.',
+    'LighterMeet is a simple, open source video conferencing app built with LiveKit and Next.js.',
   twitter: {
-    creator: '@livekitted',
-    site: '@livekitted',
+    creator: '@nicbot',
+    site: '@nicbot',
     card: 'summary_large_image',
   },
   openGraph: {
-    url: 'https://meet.livekit.io',
+    url: 'https://lightermeet.vercel.app',
     images: [
       {
-        url: 'https://meet.livekit.io/images/livekit-meet-open-graph.png',
+        url: 'https://lightermeet.vercel.app/images/lightermeet-og.png',
         width: 2000,
         height: 1000,
         type: 'image/png',
       },
     ],
-    siteName: 'LiveKit Meet',
+    siteName: 'LighterMeet',
   },
   icons: {
     icon: {
