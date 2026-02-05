@@ -1,0 +1,371 @@
+/* LighterMeet Custom Styles */
+/* Overrides for LiveKit components for:
+   1. Mobile chat as transparent overlay
+   2. Desktop self-video as small PIP preview  
+   3. General UI polish
+*/
+
+/* ============================================
+   1. MOBILE CHAT OVERLAY (max-width: 600px)
+   ============================================ */
+@media (max-width: 600px) {
+  /* Make chat a transparent overlay on mobile */
+  .lk-chat {
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.9) 0%,
+      rgba(0, 0, 0, 0.7) 20%,
+      rgba(0, 0, 0, 0.4) 50%,
+      rgba(0, 0, 0, 0.1) 80%,
+      transparent 100%
+    ) !important;
+    border-left: none !important;
+  }
+
+  /* Chat header - translucent */
+  .lk-chat-header {
+    background: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Chat messages area */
+  .lk-chat-messages {
+    background: transparent !important;
+    padding-top: 1rem;
+  }
+
+  /* Message bubbles - more visible with blur */
+  .lk-chat-entry .lk-message-body {
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  }
+
+  .lk-chat-entry[data-lk-message-origin=local] .lk-message-body {
+    background-color: rgba(68, 68, 68, 0.9) !important;
+  }
+
+  .lk-chat-entry[data-lk-message-origin=remote] .lk-message-body {
+    background-color: rgba(31, 140, 249, 0.85) !important;
+  }
+
+  /* Participant names - text shadow for readability */
+  .lk-chat-entry .lk-meta-data {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  }
+
+  /* Chat input form */
+  .lk-chat-form {
+    background: rgba(0, 0, 0, 0.85) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+  }
+
+  .lk-chat-form-input {
+    background-color: rgba(40, 40, 40, 0.9) !important;
+  }
+}
+
+
+/* ============================================
+   2. DESKTOP SELF-VIDEO PIP (min-width: 601px)
+   ============================================ */
+@media (min-width: 601px) {
+  /* 
+   * Strategy: When there are multiple participants, 
+   * target the local participant tile and make it a PIP.
+   * The grid will adjust automatically due to position:fixed.
+   */
+  
+  /* Local participant as PIP overlay */
+  .lk-grid-layout .lk-participant-tile[data-lk-local-participant="true"]:not(:only-child) {
+    position: fixed !important;
+    top: 1rem !important;
+    right: 1rem !important;
+    width: 200px !important;
+    height: auto !important;
+    aspect-ratio: 16 / 10 !important;
+    z-index: 100 !important;
+    border: 2px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    transform: none !important;
+    margin: 0 !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+  }
+
+  /* Hover effect on PIP */
+  .lk-grid-layout .lk-participant-tile[data-lk-local-participant="true"]:not(:only-child):hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+  }
+
+  /* Hide the focus toggle button on PIP (too small) */
+  .lk-grid-layout .lk-participant-tile[data-lk-local-participant="true"]:not(:only-child) .lk-focus-toggle-button {
+    display: none !important;
+  }
+
+  /* Ensure metadata stays visible on PIP */
+  .lk-grid-layout .lk-participant-tile[data-lk-local-participant="true"]:not(:only-child) .lk-participant-metadata {
+    opacity: 1 !important;
+    font-size: 0.75rem;
+  }
+
+  /* When user is alone, show them centered and normal sized */
+  .lk-grid-layout .lk-participant-tile[data-lk-local-participant="true"]:only-child {
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* In focus layout, keep local participant in carousel smaller */
+  .lk-focus-layout .lk-carousel .lk-participant-tile[data-lk-local-participant="true"] {
+    max-width: 180px !important;
+    flex-shrink: 0 !important;
+  }
+}
+
+
+/* ============================================
+   3. GENERAL UI POLISH
+   ============================================ */
+
+/* Room container */
+.lk-room-container {
+  background-color: #0a0a0a !important;
+}
+
+/* Smoother transitions */
+.lk-participant-tile {
+  transition: all 0.2s ease !important;
+}
+
+.lk-button {
+  transition: all 0.15s ease !important;
+}
+
+/* Better focus states for accessibility */
+.lk-button:focus-visible {
+  outline: 2px solid var(--lk-accent-bg) !important;
+  outline-offset: 2px !important;
+}
+
+/* Control bar - glassmorphism effect */
+.lk-control-bar {
+  background: rgba(17, 17, 17, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* Disconnect button - subtle animation */
+.lk-disconnect-button:hover {
+  transform: scale(1.02);
+}
+
+/* PreJoin animation */
+.lk-prejoin {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Video tiles - subtle hover on desktop */
+@media (min-width: 601px) {
+  .lk-participant-tile:not([data-lk-local-participant="true"]):hover {
+    transform: scale(1.01);
+    z-index: 10;
+  }
+}
+
+/* Settings modal */
+.lk-settings-menu-modal {
+  animation: modalIn 0.2s ease-out;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Toast notifications */
+.lk-toast {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Connection quality indicator glow */
+.lk-connection-quality[data-lk-quality="excellent"] {
+  filter: drop-shadow(0 0 4px var(--lk-connection-excellent));
+}
+
+.lk-connection-quality[data-lk-quality="poor"] {
+  animation: qualityPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes qualityPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Spinner */
+.lk-spinner {
+  color: var(--lk-accent-bg) !important;
+}
+
+
+/* ============================================
+   4. MOBILE-SPECIFIC POLISH
+   ============================================ */
+@media (max-width: 600px) {
+  /* Larger touch targets */
+  .lk-button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+
+  /* Compact control bar */
+  .lk-control-bar {
+    padding: 0.5rem !important;
+    gap: 0.35rem !important;
+  }
+
+  /* Tighter grid on mobile */
+  .lk-grid-layout {
+    padding: 0.25rem !important;
+    gap: 0.25rem !important;
+  }
+
+  /* Smaller text on tiles */
+  .lk-participant-name {
+    font-size: 0.7rem !important;
+  }
+
+  .lk-participant-metadata {
+    padding: 0.2rem !important;
+    gap: 0.2rem !important;
+  }
+
+  .lk-participant-metadata-item {
+    padding: 0.15rem 0.25rem !important;
+  }
+}
+
+
+/* ============================================
+   5. LANGUAGE SELECTOR STYLING
+   ============================================ */
+.language-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.language-selector select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  padding-right: 2rem !important;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.language-selector select:hover {
+  border-color: var(--lk-accent-bg) !important;
+}
+
+.language-selector select:focus {
+  outline: none !important;
+  border-color: var(--lk-accent-bg) !important;
+  box-shadow: 0 0 0 3px rgba(31, 140, 249, 0.25) !important;
+}
+
+
+/* ============================================
+   6. ENHANCED DARK THEME
+   ============================================ */
+[data-lk-theme="default"] {
+  --lk-bg: #0a0a0a;
+  --lk-bg2: #131313;
+  --lk-bg3: #1c1c1c;
+  --lk-accent-bg: #2196f3;
+}
+
+/* Better video placeholder (when camera is off) */
+.lk-participant-placeholder {
+  background: linear-gradient(145deg, #151515 0%, #0a0a0a 100%) !important;
+}
+
+.lk-participant-placeholder svg {
+  opacity: 0.4;
+}
+
+
+/* ============================================
+   7. LANGUAGE OVERLAY POSITIONING
+   ============================================ */
+.lightermeet-language-overlay {
+  position: absolute;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Desktop: bottom-left, above control bar */
+@media (min-width: 601px) {
+  .lightermeet-language-overlay {
+    bottom: calc(var(--lk-control-bar-height, 69px) + 1rem);
+    left: 1rem;
+  }
+}
+
+/* Mobile: top-left, smaller */
+@media (max-width: 600px) {
+  .lightermeet-language-overlay {
+    top: 0.5rem;
+    left: 0.5rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  
+  .lightermeet-language-overlay .language-selector label {
+    display: none;
+  }
+}

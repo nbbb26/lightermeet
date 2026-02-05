@@ -244,16 +244,8 @@ function VideoConferenceComponent(props: {
         />
         <DebugMode />
         <RecordingIndicator />
-        {/* Language selector overlay in top-right */}
-        <div style={{ 
-          position: 'absolute', 
-          top: '1rem', 
-          right: '1rem', 
-          zIndex: 100,
-          background: 'rgba(0,0,0,0.7)',
-          padding: '0.5rem 1rem',
-          borderRadius: '8px'
-        }}>
+        {/* Language selector overlay */}
+        <div className="lightermeet-language-overlay">
           <LanguageSelector 
             value={props.userLanguage} 
             onChange={props.onLanguageChange}
