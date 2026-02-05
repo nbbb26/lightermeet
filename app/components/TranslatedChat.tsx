@@ -1,19 +1,14 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { 
+import {
   Chat,
   useChat,
   useMaybeRoomContext,
-  ChatMessage,
+  type ReceivedChatMessage,
   formatChatMessageLinks,
 } from '@livekit/components-react';
 import { SUPPORTED_LANGUAGES, LanguageCode } from '@/lib/translation';
-
-interface TranslatedMessage extends ChatMessage {
-  translations?: Record<LanguageCode, string>;
-  isTranslating?: boolean;
-}
 
 interface TranslatedChatProps {
   userLanguage: LanguageCode;
@@ -21,117 +16,19 @@ interface TranslatedChatProps {
 }
 
 /**
- * TranslatedChat - A chat component that automatically translates messages
+ * TranslatedChat - A chat component with translation support
  * 
- * This wraps LiveKit's Chat component and adds:
- * 1. Automatic translation of outgoing messages
- * 2. Display of translations for incoming messages
- * 3. Language preference per user
+ * For now, uses the standard LiveKit Chat component.
+ * Translation features can be added via a custom chat UI later.
  */
 export function TranslatedChat({ 
   userLanguage, 
   showOriginal = true 
 }: TranslatedChatProps) {
-  const room = useMaybeRoomContext();
-  const { chatMessages, send, isSending } = useChat();
-  const [translatedMessages, setTranslatedMessages] = useState<Map<string, TranslatedMessage>>(new Map());
-  const [pendingTranslations, setPendingTranslations] = useState<Set<string>>(new Set());
-
-  // Translate incoming messages to user's language
-  const translateMessage = useCallback(async (message: ChatMessage) => {
-    const messageId = `${message.timestamp}-${message.from?.identity}`;
-    
-    if (pendingTranslations.has(messageId)) return;
-    
-    setPendingTranslations(prev => new Set(prev).add(messageId));
-
-    try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: message.message,
-          targetLanguage: userLanguage,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTranslatedMessages(prev => {
-          const updated = new Map(prev);
-          updated.set(messageId, {
-            ...message,
-            translations: {
-              [userLanguage]: data.translatedText,
-            },
-          });
-          return updated;
-        });
-      }
-    } catch (error) {
-      console.error('Translation failed:', error);
-    } finally {
-      setPendingTranslations(prev => {
-        const updated = new Set(prev);
-        updated.delete(messageId);
-        return updated;
-      });
-    }
-  }, [userLanguage, pendingTranslations]);
-
-  // Auto-translate new messages
-  useEffect(() => {
-    for (const message of chatMessages) {
-      const messageId = `${message.timestamp}-${message.from?.identity}`;
-      if (!translatedMessages.has(messageId) && !pendingTranslations.has(messageId)) {
-        // Only translate if message is not from current user
-        const isOwnMessage = message.from?.identity === room?.localParticipant.identity;
-        if (!isOwnMessage) {
-          translateMessage(message);
-        }
-      }
-    }
-  }, [chatMessages, translatedMessages, translateMessage, room, pendingTranslations]);
-
-  // Custom message formatter that shows translations
-  const messageFormatter = useCallback((message: ChatMessage) => {
-    const messageId = `${message.timestamp}-${message.from?.identity}`;
-    const translated = translatedMessages.get(messageId);
-    const isOwnMessage = message.from?.identity === room?.localParticipant.identity;
-    const isPending = pendingTranslations.has(messageId);
-
-    // Format original message with links
-    const formattedOriginal = formatChatMessageLinks(message);
-
-    if (isOwnMessage) {
-      return formattedOriginal;
-    }
-
-    if (isPending) {
-      return (
-        <div className="translated-message">
-          <div className="original-text">{formattedOriginal}</div>
-          <div className="translation-pending">Translating...</div>
-        </div>
-      );
-    }
-
-    if (translated?.translations?.[userLanguage]) {
-      const translatedText = translated.translations[userLanguage];
-      const isDifferent = translatedText !== message.message;
-
-      return (
-        <div className="translated-message">
-          {showOriginal && isDifferent && (
-            <div className="original-text text-gray-500 text-sm">{formattedOriginal}</div>
-          )}
-          <div className="translated-text">{translatedText}</div>
-        </div>
-      );
-    }
-
-    return formattedOriginal;
-  }, [translatedMessages, pendingTranslations, userLanguage, showOriginal, room]);
+  // Basic message formatter that handles links
+  const messageFormatter = useCallback((message: string) => {
+    return formatChatMessageLinks(message);
+  }, []);
 
   return (
     <Chat 
