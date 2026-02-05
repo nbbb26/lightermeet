@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  transpilePackages: ['@livekit/components-styles'],
   productionBrowserSourceMaps: true,
   images: {
     formats: ['image/webp'],

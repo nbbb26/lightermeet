@@ -29,6 +29,9 @@ import {
 import { useRouter } from 'next/navigation';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
+import { LanguageSelector } from '@/app/components/TranslatedChat';
+import { LanguageCode } from '@/lib/translation';
+import { useTranslatedChat } from './useTranslatedChat';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
@@ -53,6 +56,7 @@ export function PageClientImpl(props: {
   const [connectionDetails, setConnectionDetails] = React.useState<ConnectionDetails | undefined>(
     undefined,
   );
+  const [userLanguage, setUserLanguage] = React.useState<LanguageCode>('en');
 
   const handlePreJoinSubmit = React.useCallback(async (values: LocalUserChoices) => {
     setPreJoinChoices(values);
@@ -72,16 +76,26 @@ export function PageClientImpl(props: {
     <main data-lk-theme="default" style={{ height: '100%' }}>
       {connectionDetails === undefined || preJoinChoices === undefined ? (
         <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
-          <PreJoin
-            defaults={preJoinDefaults}
-            onSubmit={handlePreJoinSubmit}
-            onError={handlePreJoinError}
-          />
+          <div style={{ width: '100%', maxWidth: '400px' }}>
+            <PreJoin
+              defaults={preJoinDefaults}
+              onSubmit={handlePreJoinSubmit}
+              onError={handlePreJoinError}
+            />
+            <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
+              <LanguageSelector 
+                value={userLanguage} 
+                onChange={setUserLanguage}
+              />
+            </div>
+          </div>
         </div>
       ) : (
         <VideoConferenceComponent
           connectionDetails={connectionDetails}
           userChoices={preJoinChoices}
+          userLanguage={userLanguage}
+          onLanguageChange={setUserLanguage}
           options={{ codec: props.codec, hq: props.hq }}
         />
       )}
@@ -92,6 +106,8 @@ export function PageClientImpl(props: {
 function VideoConferenceComponent(props: {
   userChoices: LocalUserChoices;
   connectionDetails: ConnectionDetails;
+  userLanguage: LanguageCode;
+  onLanguageChange: (lang: LanguageCode) => void;
   options: {
     hq: boolean;
     codec: VideoCodec;
@@ -197,6 +213,7 @@ function VideoConferenceComponent(props: {
   }, [e2eeSetupComplete, room, props.connectionDetails, props.userChoices]);
 
   const lowPowerMode = useLowCPUOptimizer(room);
+  const translatedChatFormatter = useTranslatedChat(props.userLanguage, true);
 
   const router = useRouter();
   const handleOnLeave = React.useCallback(() => router.push('/'), [router]);
@@ -222,11 +239,26 @@ function VideoConferenceComponent(props: {
       <RoomContext.Provider value={room}>
         <KeyboardShortcuts />
         <VideoConference
-          chatMessageFormatter={formatChatMessageLinks}
+          chatMessageFormatter={translatedChatFormatter}
           SettingsComponent={SHOW_SETTINGS_MENU ? SettingsMenu : undefined}
         />
         <DebugMode />
         <RecordingIndicator />
+        {/* Language selector overlay in top-right */}
+        <div style={{ 
+          position: 'absolute', 
+          top: '1rem', 
+          right: '1rem', 
+          zIndex: 100,
+          background: 'rgba(0,0,0,0.7)',
+          padding: '0.5rem 1rem',
+          borderRadius: '8px'
+        }}>
+          <LanguageSelector 
+            value={props.userLanguage} 
+            onChange={props.onLanguageChange}
+          />
+        </div>
       </RoomContext.Provider>
     </div>
   );
