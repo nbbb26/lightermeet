@@ -4,7 +4,6 @@ import {
   verifyParticipantToken,
   unauthorizedResponse,
   checkRateLimit,
-  getClientIP,
   rateLimitedResponse,
 } from '@/lib/api-auth';
 
@@ -27,8 +26,11 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Missing roomName parameter', { status: 403 });
     }
 
-    // Verify the user is authorized for this specific room
-    if (auth.roomName && auth.roomName !== roomName) {
+    // Verify the user has a room-scoped token for this specific room
+    if (!auth.roomName) {
+      return unauthorizedResponse('Room-scoped token required for recording');
+    }
+    if (auth.roomName !== roomName) {
       return unauthorizedResponse('Not authorized for this room');
     }
 

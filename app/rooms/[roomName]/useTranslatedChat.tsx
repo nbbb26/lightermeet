@@ -152,17 +152,40 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true, pa
     });
   }, [chatMessages, enabled, room, userLanguage, participantToken]);
 
+  // Build a reverse index: message text -> list of TranslatedMessage entries (ordered by timestamp)
+  // This handles duplicate messages correctly by consuming matches in order
+  const textToTranslations = useCallback(() => {
+    const index = new Map<string, TranslatedMessage[]>();
+    // Sort entries by timestamp to maintain consistent ordering
+    const entries = Array.from(translatedMessages.values()).sort(
+      (a, b) => a.originalMessage.timestamp - b.originalMessage.timestamp
+    );
+    for (const entry of entries) {
+      const text = entry.originalMessage.message ?? '';
+      const list = index.get(text) ?? [];
+      list.push(entry);
+      index.set(text, list);
+    }
+    return index;
+  }, [translatedMessages]);
+
+  // Track render position for duplicate messages within a single render cycle
+  const renderCounterRef = useRef<Map<string, number>>(new Map());
+
   // Message formatter for VideoConference component
-  // This only formats the text, the actual translation display happens in the chat UI
   const messageFormatter = useCallback((message: string) => {
-    // Find the translated message for this text
-    let translatedMsg: TranslatedMessage | undefined;
+    const index = textToTranslations();
+    const matches = index.get(message);
     
-    for (const [, msg] of translatedMessages) {
-      if (msg.originalMessage.message === message) {
-        translatedMsg = msg;
-        break;
-      }
+    // Get the next unrendered match for this text (handles duplicates)
+    const renderCount = renderCounterRef.current.get(message) ?? 0;
+    const translatedMsg = matches?.[renderCount];
+    // Advance counter for next call with same text
+    renderCounterRef.current.set(message, renderCount + 1);
+    // Reset counters when we've gone through all matches (next render cycle)
+    if (renderCount + 1 >= (matches?.length ?? 0)) {
+      // Schedule reset for next microtask (after this render cycle)
+      queueMicrotask(() => renderCounterRef.current.delete(message));
     }
 
     // If no translation data, just format links
@@ -228,7 +251,7 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true, pa
 
     // No translation needed (message is already in target language)
     return formatChatMessageLinks(message);
-  }, [translatedMessages]);
+  }, [textToTranslations]);
 
   return messageFormatter;
 }

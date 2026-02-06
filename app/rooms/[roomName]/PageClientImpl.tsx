@@ -216,6 +216,11 @@ function VideoConferenceComponent(props: {
   // Issue #5: Room should be created with roomOptions as dependency
   const room = React.useMemo(() => new Room(roomOptions), [roomOptions]);
 
+  // Reset e2eeSetupComplete when room instance changes to prevent connect race
+  React.useEffect(() => {
+    setE2eeSetupComplete(false);
+  }, [room]);
+
   React.useEffect(() => {
     if (e2eeEnabled) {
       keyProviderRef.current

@@ -16,6 +16,7 @@ import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
 import { SettingsMenu } from '@/lib/SettingsMenu';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
 import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
+import { AuthTokenProvider } from '@/lib/AuthContext';
 
 export function VideoConferenceClientImpl(props: {
   liveKitUrl: string;
@@ -51,6 +52,11 @@ export function VideoConferenceClientImpl(props: {
   }, [e2eeEnabled, props.codec, props.singlePeerConnection, worker]);
 
   const room = useMemo(() => new Room(roomOptions), [roomOptions]);
+
+  // Reset e2eeSetupComplete when room instance changes to prevent connect race
+  useEffect(() => {
+    setE2eeSetupComplete(false);
+  }, [room]);
 
   const connectOptions = useMemo((): RoomConnectOptions => {
     return {
@@ -98,16 +104,18 @@ export function VideoConferenceClientImpl(props: {
 
   return (
     <div className="lk-room-container">
-      <RoomContext.Provider value={room}>
-        <KeyboardShortcuts />
-        <VideoConference
-          chatMessageFormatter={formatChatMessageLinks}
-          SettingsComponent={
-            process.env.NEXT_PUBLIC_SHOW_SETTINGS_MENU === 'true' ? SettingsMenu : undefined
-          }
-        />
-        <DebugMode logLevel={LogLevel.debug} />
-      </RoomContext.Provider>
+      <AuthTokenProvider token={props.token}>
+        <RoomContext.Provider value={room}>
+          <KeyboardShortcuts />
+          <VideoConference
+            chatMessageFormatter={formatChatMessageLinks}
+            SettingsComponent={
+              process.env.NEXT_PUBLIC_SHOW_SETTINGS_MENU === 'true' ? SettingsMenu : undefined
+            }
+          />
+          <DebugMode logLevel={LogLevel.debug} />
+        </RoomContext.Provider>
+      </AuthTokenProvider>
     </div>
   );
 }
