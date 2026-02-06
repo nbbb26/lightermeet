@@ -7,6 +7,7 @@ import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
 import { RecordingIndicator } from '@/lib/RecordingIndicator';
 import { SettingsMenu } from '@/lib/SettingsMenu';
 import { ConnectionDetails } from '@/lib/types';
+import { AuthTokenProvider } from '@/lib/AuthContext';
 import {
   formatChatMessageLinks,
   LocalUserChoices,
@@ -57,26 +58,71 @@ export function PageClientImpl(props: {
     undefined,
   );
   const [userLanguage, setUserLanguage] = React.useState<LanguageCode>('en');
+  const [preJoinError, setPreJoinError] = React.useState<string | null>(null);
 
+  // Issue #7: Harden pre-join fetch error handling
   const handlePreJoinSubmit = React.useCallback(async (values: LocalUserChoices) => {
     setPreJoinChoices(values);
-    const url = new URL(CONN_DETAILS_ENDPOINT, window.location.origin);
-    url.searchParams.append('roomName', props.roomName);
-    url.searchParams.append('participantName', values.username);
-    if (props.region) {
-      url.searchParams.append('region', props.region);
+    setPreJoinError(null);
+
+    try {
+      const url = new URL(CONN_DETAILS_ENDPOINT, window.location.origin);
+      url.searchParams.append('roomName', props.roomName);
+      url.searchParams.append('participantName', values.username);
+      if (props.region) {
+        url.searchParams.append('region', props.region);
+      }
+      const connectionDetailsResp = await fetch(url.toString());
+
+      if (!connectionDetailsResp.ok) {
+        const errorText = await connectionDetailsResp.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to get connection details: ${errorText}`);
+      }
+
+      const connectionDetailsData = await connectionDetailsResp.json();
+
+      // Validate response shape
+      if (
+        !connectionDetailsData.serverUrl ||
+        !connectionDetailsData.participantToken ||
+        typeof connectionDetailsData.serverUrl !== 'string' ||
+        typeof connectionDetailsData.participantToken !== 'string'
+      ) {
+        throw new Error('Invalid connection details received from server');
+      }
+
+      setConnectionDetails(connectionDetailsData);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to connect';
+      console.error('Pre-join connection error:', error);
+      setPreJoinError(message);
+      setPreJoinChoices(undefined); // Reset so user can retry
     }
-    const connectionDetailsResp = await fetch(url.toString());
-    const connectionDetailsData = await connectionDetailsResp.json();
-    setConnectionDetails(connectionDetailsData);
+  }, [props.roomName, props.region]);
+
+  const handlePreJoinError = React.useCallback((e: Error) => {
+    console.error('Pre-join error:', e);
+    setPreJoinError(e.message);
   }, []);
-  const handlePreJoinError = React.useCallback((e: any) => console.error(e), []);
 
   return (
     <main data-lk-theme="default" style={{ height: '100%' }}>
       {connectionDetails === undefined || preJoinChoices === undefined ? (
         <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
           <div style={{ width: '100%', maxWidth: '400px' }}>
+            {preJoinError && (
+              <div style={{
+                padding: '0.75rem 1rem',
+                marginBottom: '1rem',
+                background: 'rgba(255, 80, 80, 0.15)',
+                border: '1px solid rgba(255, 80, 80, 0.3)',
+                borderRadius: '8px',
+                color: '#ff6b6b',
+                fontSize: '0.9rem',
+              }}>
+                {preJoinError}
+              </div>
+            )}
             <PreJoin
               defaults={preJoinDefaults}
               onSubmit={handlePreJoinSubmit}
@@ -113,12 +159,28 @@ function VideoConferenceComponent(props: {
     codec: VideoCodec;
   };
 }) {
-  const keyProvider = new ExternalE2EEKeyProvider();
+  // Issue #4: Use useRef for keyProvider and useMemo for worker to ensure stable lifecycle
+  const keyProviderRef = React.useRef<ExternalE2EEKeyProvider>(new ExternalE2EEKeyProvider());
   const { worker, e2eePassphrase } = useSetupE2EE();
   const e2eeEnabled = !!(e2eePassphrase && worker);
 
   const [e2eeSetupComplete, setE2eeSetupComplete] = React.useState(false);
 
+  // Issue #3: Define callbacks BEFORE any hooks/effects that reference them (TDZ fix)
+  const router = useRouter();
+  const handleOnLeave = React.useCallback(() => router.push('/'), [router]);
+  const handleError = React.useCallback((error: Error) => {
+    console.error(error);
+    alert(`Encountered an unexpected error, check the console logs for details: ${error.message}`);
+  }, []);
+  const handleEncryptionError = React.useCallback((error: Error) => {
+    console.error(error);
+    alert(
+      `Encountered an unexpected encryption error, check the console logs for details: ${error.message}`,
+    );
+  }, []);
+
+  // Issue #5: Include all relevant dependencies in roomOptions memo
   const roomOptions = React.useMemo((): RoomOptions => {
     let videoCodec: VideoCodec | undefined = props.options.codec ? props.options.codec : 'vp9';
     if (e2eeEnabled && (videoCodec === 'av1' || videoCodec === 'vp9')) {
@@ -144,16 +206,19 @@ function VideoConferenceComponent(props: {
       },
       adaptiveStream: true,
       dynacast: true,
-      e2ee: keyProvider && worker && e2eeEnabled ? { keyProvider, worker } : undefined,
+      e2ee: e2eeEnabled && worker
+        ? { keyProvider: keyProviderRef.current, worker }
+        : undefined,
       singlePeerConnection: true,
     };
-  }, [props.userChoices, props.options.hq, props.options.codec]);
+  }, [props.userChoices, props.options.hq, props.options.codec, e2eeEnabled, worker]);
 
-  const room = React.useMemo(() => new Room(roomOptions), []);
+  // Issue #5: Room should be created with roomOptions as dependency
+  const room = React.useMemo(() => new Room(roomOptions), [roomOptions]);
 
   React.useEffect(() => {
     if (e2eeEnabled) {
-      keyProvider
+      keyProviderRef.current
         .setKey(decodePassphrase(e2eePassphrase))
         .then(() => {
           room.setE2EEEnabled(true).catch((e) => {
@@ -179,6 +244,7 @@ function VideoConferenceComponent(props: {
     };
   }, []);
 
+  // Issue #6: Add room.disconnect() cleanup on unmount
   React.useEffect(() => {
     room.on(RoomEvent.Disconnected, handleOnLeave);
     room.on(RoomEvent.EncryptionError, handleEncryptionError);
@@ -209,24 +275,36 @@ function VideoConferenceComponent(props: {
       room.off(RoomEvent.Disconnected, handleOnLeave);
       room.off(RoomEvent.EncryptionError, handleEncryptionError);
       room.off(RoomEvent.MediaDevicesError, handleError);
+      // Issue #6: Disconnect room and stop local tracks on cleanup
+      room.disconnect(true).catch((e) => console.error('Room disconnect error:', e));
     };
-  }, [e2eeSetupComplete, room, props.connectionDetails, props.userChoices]);
+  }, [
+    e2eeSetupComplete,
+    room,
+    props.connectionDetails,
+    props.userChoices,
+    connectOptions,
+    handleOnLeave,
+    handleEncryptionError,
+    handleError,
+  ]);
 
   const lowPowerMode = useLowCPUOptimizer(room);
-  const translatedChatFormatter = useTranslatedChat(props.userLanguage, true);
+  // Pass participant token to useTranslatedChat for authenticated API calls
+  const translatedChatFormatter = useTranslatedChat(
+    props.userLanguage,
+    true,
+    props.connectionDetails.participantToken,
+  );
 
-  const router = useRouter();
-  const handleOnLeave = React.useCallback(() => router.push('/'), [router]);
-  const handleError = React.useCallback((error: Error) => {
-    console.error(error);
-    alert(`Encountered an unexpected error, check the console logs for details: ${error.message}`);
-  }, []);
-  const handleEncryptionError = React.useCallback((error: Error) => {
-    console.error(error);
-    alert(
-      `Encountered an unexpected encryption error, check the console logs for details: ${error.message}`,
-    );
-  }, []);
+  // Issue #4: Cleanup worker on unmount
+  React.useEffect(() => {
+    return () => {
+      if (worker) {
+        worker.terminate();
+      }
+    };
+  }, [worker]);
 
   React.useEffect(() => {
     if (lowPowerMode) {
@@ -236,22 +314,24 @@ function VideoConferenceComponent(props: {
 
   return (
     <div className="lk-room-container">
-      <RoomContext.Provider value={room}>
-        <KeyboardShortcuts />
-        <VideoConference
-          chatMessageFormatter={translatedChatFormatter}
-          SettingsComponent={SHOW_SETTINGS_MENU ? SettingsMenu : undefined}
-        />
-        <DebugMode />
-        <RecordingIndicator />
-        {/* Language selector overlay */}
-        <div className="lightermeet-language-overlay">
-          <LanguageSelector 
-            value={props.userLanguage} 
-            onChange={props.onLanguageChange}
+      <AuthTokenProvider token={props.connectionDetails.participantToken}>
+        <RoomContext.Provider value={room}>
+          <KeyboardShortcuts />
+          <VideoConference
+            chatMessageFormatter={translatedChatFormatter}
+            SettingsComponent={SHOW_SETTINGS_MENU ? SettingsMenu : undefined}
           />
-        </div>
-      </RoomContext.Provider>
+          <DebugMode />
+          <RecordingIndicator />
+          {/* Language selector overlay */}
+          <div className="lightermeet-language-overlay">
+            <LanguageSelector 
+              value={props.userLanguage} 
+              onChange={props.onLanguageChange}
+            />
+          </div>
+        </RoomContext.Provider>
+      </AuthTokenProvider>
     </div>
   );
 }

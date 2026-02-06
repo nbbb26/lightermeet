@@ -11,7 +11,7 @@ import {
   type VideoCodec,
 } from 'livekit-client';
 import { DebugMode } from '@/lib/Debug';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardShortcuts } from '@/lib/KeyboardShortcuts';
 import { SettingsMenu } from '@/lib/SettingsMenu';
 import { useSetupE2EE } from '@/lib/useSetupE2EE';
@@ -23,12 +23,14 @@ export function VideoConferenceClientImpl(props: {
   codec: VideoCodec | undefined;
   singlePeerConnection: boolean | undefined;
 }) {
-  const keyProvider = new ExternalE2EEKeyProvider();
+  // Issue #4: Use useRef for keyProvider to maintain stable reference
+  const keyProviderRef = useRef<ExternalE2EEKeyProvider>(new ExternalE2EEKeyProvider());
   const { worker, e2eePassphrase } = useSetupE2EE();
   const e2eeEnabled = !!(e2eePassphrase && worker);
 
   const [e2eeSetupComplete, setE2eeSetupComplete] = useState(false);
 
+  // Issue #5: Include proper dependencies in roomOptions
   const roomOptions = useMemo((): RoomOptions => {
     return {
       publishDefaults: {
@@ -38,15 +40,15 @@ export function VideoConferenceClientImpl(props: {
       },
       adaptiveStream: { pixelDensity: 'screen' },
       dynacast: true,
-      e2ee: e2eeEnabled
+      e2ee: e2eeEnabled && worker
         ? {
-            keyProvider,
+            keyProvider: keyProviderRef.current,
             worker,
           }
         : undefined,
       singlePeerConnection: props.singlePeerConnection,
     };
-  }, [e2eeEnabled, props.codec, keyProvider, worker]);
+  }, [e2eeEnabled, props.codec, props.singlePeerConnection, worker]);
 
   const room = useMemo(() => new Room(roomOptions), [roomOptions]);
 
@@ -57,8 +59,8 @@ export function VideoConferenceClientImpl(props: {
   }, []);
 
   useEffect(() => {
-    if (e2eeEnabled) {
-      keyProvider.setKey(e2eePassphrase).then(() => {
+    if (e2eeEnabled && e2eePassphrase) {
+      keyProviderRef.current.setKey(e2eePassphrase).then(() => {
         room.setE2EEEnabled(true).then(() => {
           setE2eeSetupComplete(true);
         });
@@ -66,8 +68,9 @@ export function VideoConferenceClientImpl(props: {
     } else {
       setE2eeSetupComplete(true);
     }
-  }, [e2eeEnabled, e2eePassphrase, keyProvider, room, setE2eeSetupComplete]);
+  }, [e2eeEnabled, e2eePassphrase, room]);
 
+  // Issue #6: Add room.disconnect() cleanup on unmount
   useEffect(() => {
     if (e2eeSetupComplete) {
       room.connect(props.liveKitUrl, props.token, connectOptions).catch((error) => {
@@ -77,7 +80,19 @@ export function VideoConferenceClientImpl(props: {
         console.error(error);
       });
     }
+    return () => {
+      room.disconnect(true).catch((e) => console.error('Room disconnect error:', e));
+    };
   }, [room, props.liveKitUrl, props.token, connectOptions, e2eeSetupComplete]);
+
+  // Issue #4: Cleanup worker on unmount
+  useEffect(() => {
+    return () => {
+      if (worker) {
+        worker.terminate();
+      }
+    };
+  }, [worker]);
 
   useLowCPUOptimizer(room);
 

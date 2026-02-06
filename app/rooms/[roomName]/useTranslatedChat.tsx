@@ -13,24 +13,42 @@ interface TranslatedMessage {
 }
 
 /**
+ * Generate a stable composite key for a chat message.
+ * Uses identity + timestamp + text hash to handle duplicates.
+ */
+function getMessageKey(msg: ReceivedChatMessage): string {
+  const identity = msg.from?.identity ?? 'unknown';
+  // Simple hash of message text for uniqueness
+  let hash = 0;
+  const text = msg.message ?? '';
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return `${identity}:${msg.timestamp}:${hash}`;
+}
+
+/**
  * Hook to manage chat message translation
  * Listens to chat messages and translates them to the user's language
  * Returns both the messages and a formatter for display
  */
-export function useTranslatedChat(userLanguage: LanguageCode, enabled = true) {
+export function useTranslatedChat(userLanguage: LanguageCode, enabled = true, participantToken?: string) {
   const room = useMaybeRoomContext();
   const { chatMessages, send: sendMessage } = useChat();
   
-  // Store translations by message timestamp
-  const [translatedMessages, setTranslatedMessages] = useState<Map<number, TranslatedMessage>>(new Map());
-  const abortControllersRef = useRef<Map<number, AbortController>>(new Map());
-  const processedMessagesRef = useRef<Set<number>>(new Set());
+  // Store translations by composite key (identity + timestamp + text hash)
+  const [translatedMessages, setTranslatedMessages] = useState<Map<string, TranslatedMessage>>(new Map());
+  const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
+  const processedMessagesRef = useRef<Set<string>>(new Set());
 
   // Cleanup on unmount
   useEffect(() => {
+    const controllers = abortControllersRef.current;
     return () => {
-      abortControllersRef.current.forEach(controller => controller.abort());
-      abortControllersRef.current.clear();
+      controllers.forEach(controller => controller.abort());
+      controllers.clear();
     };
   }, []);
 
@@ -49,21 +67,21 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true) {
     }
 
     chatMessages.forEach(async (msg) => {
-      const msgTimestamp = msg.timestamp;
+      const msgKey = getMessageKey(msg);
       
       // Skip if already processed
-      if (processedMessagesRef.current.has(msgTimestamp)) {
+      if (processedMessagesRef.current.has(msgKey)) {
         return;
       }
 
-      processedMessagesRef.current.add(msgTimestamp);
+      processedMessagesRef.current.add(msgKey);
 
       // Don't translate own messages
       const localParticipant = room.localParticipant;
       const isOwnMessage = msg.from?.identity === localParticipant.identity;
       
       if (isOwnMessage) {
-        setTranslatedMessages(prev => new Map(prev).set(msgTimestamp, {
+        setTranslatedMessages(prev => new Map(prev).set(msgKey, {
           originalMessage: msg,
           translatedText: null,
           translating: false,
@@ -74,9 +92,9 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true) {
 
       // Start translation
       const abortController = new AbortController();
-      abortControllersRef.current.set(msgTimestamp, abortController);
+      abortControllersRef.current.set(msgKey, abortController);
 
-      setTranslatedMessages(prev => new Map(prev).set(msgTimestamp, {
+      setTranslatedMessages(prev => new Map(prev).set(msgKey, {
         originalMessage: msg,
         translatedText: null,
         translating: true,
@@ -84,9 +102,14 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true) {
       }));
 
       try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (participantToken) {
+          headers['Authorization'] = `Bearer ${participantToken}`;
+        }
+
         const response = await fetch('/api/translate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             text: msg.message,
             targetLanguage: userLanguage,
@@ -101,13 +124,13 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true) {
         const data = await response.json();
 
         if (!abortController.signal.aborted) {
-          setTranslatedMessages(prev => new Map(prev).set(msgTimestamp, {
+          setTranslatedMessages(prev => new Map(prev).set(msgKey, {
             originalMessage: msg,
             translatedText: data.translatedText,
             translating: false,
             error: null,
           }));
-          abortControllersRef.current.delete(msgTimestamp);
+          abortControllersRef.current.delete(msgKey);
         }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
@@ -117,17 +140,17 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true) {
         console.error('Translation error:', error);
 
         if (!abortController.signal.aborted) {
-          setTranslatedMessages(prev => new Map(prev).set(msgTimestamp, {
+          setTranslatedMessages(prev => new Map(prev).set(msgKey, {
             originalMessage: msg,
             translatedText: null,
             translating: false,
             error: error instanceof Error ? error.message : 'Translation failed',
           }));
-          abortControllersRef.current.delete(msgTimestamp);
+          abortControllersRef.current.delete(msgKey);
         }
       }
     });
-  }, [chatMessages, enabled, room, userLanguage]);
+  }, [chatMessages, enabled, room, userLanguage, participantToken]);
 
   // Message formatter for VideoConference component
   // This only formats the text, the actual translation display happens in the chat UI

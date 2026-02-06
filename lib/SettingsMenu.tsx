@@ -11,6 +11,7 @@ import {
 import styles from '../styles/SettingsMenu.module.css';
 import { CameraSettings } from './CameraSettings';
 import { MicrophoneSettings } from './MicrophoneSettings';
+import { useAuthToken } from './AuthContext';
 /**
  * @alpha
  */
@@ -22,6 +23,7 @@ export interface SettingsMenuProps extends React.HTMLAttributes<HTMLDivElement> 
 export function SettingsMenu(props: SettingsMenuProps) {
   const layoutContext = useMaybeLayoutContext();
   const room = useRoomContext();
+  const authToken = useAuthToken();
   const recordingEndpoint = process.env.NEXT_PUBLIC_LK_RECORD_ENDPOINT;
 
   const settings = React.useMemo(() => {
@@ -29,7 +31,7 @@ export function SettingsMenu(props: SettingsMenuProps) {
       media: { camera: true, microphone: true, label: 'Media Devices', speaker: true },
       recording: recordingEndpoint ? { label: 'Recording' } : undefined,
     };
-  }, []);
+  }, [recordingEndpoint]);
 
   const tabs = React.useMemo(
     () => Object.keys(settings).filter((t) => t !== undefined) as Array<keyof typeof settings>,
@@ -56,11 +58,15 @@ export function SettingsMenu(props: SettingsMenuProps) {
     }
     setProcessingRecRequest(true);
     setInitialRecStatus(isRecording);
+    const headers: Record<string, string> = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
     let response: Response;
     if (isRecording) {
-      response = await fetch(recordingEndpoint + `/stop?roomName=${room.name}`);
+      response = await fetch(recordingEndpoint + `/stop?roomName=${room.name}`, { headers });
     } else {
-      response = await fetch(recordingEndpoint + `/start?roomName=${room.name}`);
+      response = await fetch(recordingEndpoint + `/start?roomName=${room.name}`, { headers });
     }
     if (response.ok) {
     } else {
@@ -85,10 +91,7 @@ export function SettingsMenu(props: SettingsMenuProps) {
                 onClick={() => setActiveTab(tab)}
                 aria-pressed={tab === activeTab}
               >
-                {
-                  // @ts-ignore
-                  settings[tab].label
-                }
+                {(settings[tab] as { label: string }).label}
               </button>
             ),
         )}

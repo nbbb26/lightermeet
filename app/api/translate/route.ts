@@ -1,8 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { translateText, detectLanguage, translateForRoom, LanguageCode, SUPPORTED_LANGUAGES } from '@/lib/translation';
+import {
+  verifyParticipantToken,
+  unauthorizedResponse,
+  checkRateLimit,
+  getClientIP,
+  rateLimitedResponse,
+} from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    // Auth: require valid LiveKit participant token
+    const auth = await verifyParticipantToken(request);
+    if (!auth) {
+      return unauthorizedResponse('Valid participant token required for translation');
+    }
+
+    // Rate limit: 30 requests per minute per identity (translation is chatty)
+    if (!checkRateLimit(`translate:${auth.identity}`, 30, 60_000)) {
+      return rateLimitedResponse();
+    }
+
+    // Additional IP-based rate limit: 100 requests per minute
+    const clientIP = getClientIP(request);
+    if (!checkRateLimit(`translate-ip:${clientIP}`, 100, 60_000)) {
+      return rateLimitedResponse();
+    }
+
     const body = await request.json();
     const { text, targetLanguage, targetLanguages, sourceLanguage } = body;
 
@@ -85,8 +109,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Translation error:', error);
+    // Issue #10: Don't expose internal error details to client
     return NextResponse.json(
-      { error: 'Translation failed', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Translation failed' },
       { status: 500 }
     );
   }
@@ -98,6 +123,7 @@ export async function GET() {
     usage: {
       singleTranslation: {
         method: 'POST',
+        headers: { Authorization: 'Bearer <livekit-participant-token>' },
         body: {
           text: 'Hello world',
           targetLanguage: 'es',
@@ -106,6 +132,7 @@ export async function GET() {
       },
       multipleTranslations: {
         method: 'POST',
+        headers: { Authorization: 'Bearer <livekit-participant-token>' },
         body: {
           text: 'Hello world',
           targetLanguages: ['es', 'fr', 'de'],

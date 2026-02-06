@@ -1,19 +1,35 @@
 import { EgressClient, EncodedFileOutput, S3Upload } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  verifyParticipantToken,
+  unauthorizedResponse,
+  checkRateLimit,
+  getClientIP,
+  rateLimitedResponse,
+} from '@/lib/api-auth';
 
 export async function GET(req: NextRequest) {
   try {
-    const roomName = req.nextUrl.searchParams.get('roomName');
+    // Auth: require valid LiveKit participant token
+    const auth = await verifyParticipantToken(req);
+    if (!auth) {
+      return unauthorizedResponse('Valid participant token required to start recording');
+    }
 
-    /**
-     * CAUTION:
-     * for simplicity this implementation does not authenticate users and therefore allows anyone with knowledge of a roomName
-     * to start/stop recordings for that room.
-     * DO NOT USE THIS FOR PRODUCTION PURPOSES AS IS
-     */
+    // Rate limit: 5 requests per minute per identity
+    if (!checkRateLimit(`record-start:${auth.identity}`, 5, 60_000)) {
+      return rateLimitedResponse();
+    }
+
+    const roomName = req.nextUrl.searchParams.get('roomName');
 
     if (roomName === null) {
       return new NextResponse('Missing roomName parameter', { status: 403 });
+    }
+
+    // Verify the user is authorized for this specific room
+    if (auth.roomName && auth.roomName !== roomName) {
+      return unauthorizedResponse('Not authorized for this room');
     }
 
     const {
@@ -61,10 +77,10 @@ export async function GET(req: NextRequest) {
       },
     );
 
+    console.log(`[recording] Started by ${auth.identity} for room ${roomName}`);
     return new NextResponse(null, { status: 200 });
   } catch (error) {
-    if (error instanceof Error) {
-      return new NextResponse(error.message, { status: 500 });
-    }
+    console.error('[recording] Start error:', error);
+    return NextResponse.json({ error: 'Failed to start recording' }, { status: 500 });
   }
 }

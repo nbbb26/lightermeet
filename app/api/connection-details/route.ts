@@ -60,9 +60,8 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    if (error instanceof Error) {
-      return new NextResponse(error.message, { status: 500 });
-    }
+    console.error('[connection-details] Error:', error);
+    return new NextResponse('Failed to generate connection details', { status: 500 });
   }
 }
 

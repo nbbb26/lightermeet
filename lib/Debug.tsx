@@ -1,11 +1,19 @@
 import * as React from 'react';
 import { useRoomContext } from '@livekit/components-react';
 import { setLogLevel, LogLevel, RemoteTrackPublication, setLogExtension } from 'livekit-client';
-// @ts-ignore
+// tinykeys has types but package.json "exports" doesn't resolve them properly
+// @ts-expect-error - tinykeys package.json exports misconfiguration
 import { tinykeys } from 'tinykeys';
 import { datadogLogs } from '@datadog/browser-logs';
 
 import styles from '../styles/Debug.module.css';
+
+// Extend Window interface for debug room reference
+declare global {
+  interface Window {
+    __lk_room?: unknown;
+  }
+}
 
 export const useDebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
   const room = useRoomContext();
@@ -42,11 +50,9 @@ export const useDebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
       });
     }
 
-    // @ts-expect-error
     window.__lk_room = room;
 
     return () => {
-      // @ts-expect-error
       window.__lk_room = undefined;
     };
   }, [room, logLevel]);
@@ -102,8 +108,7 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
 
       // fall through
       default:
-        // @ts-expect-error
-        room.simulateScenario(value);
+        (room as unknown as { simulateScenario: (scenario: string) => void }).simulateScenario(value);
     }
   };
 

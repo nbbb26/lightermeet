@@ -34,8 +34,68 @@ interface TranslationResult {
   cached?: boolean;
 }
 
-// Simple in-memory cache for translations
-const translationCache = new Map<string, string>();
+// Bounded LRU cache with TTL for translations
+const MAX_CACHE_SIZE = 1000;
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+interface CacheEntry {
+  value: string;
+  timestamp: number;
+}
+
+class LRUTranslationCache {
+  private cache = new Map<string, CacheEntry>();
+  private maxSize: number;
+  private ttlMs: number;
+
+  constructor(maxSize: number, ttlMs: number) {
+    this.maxSize = maxSize;
+    this.ttlMs = ttlMs;
+  }
+
+  get(key: string): string | undefined {
+    const entry = this.cache.get(key);
+    if (!entry) return undefined;
+
+    // Check TTL
+    if (Date.now() - entry.timestamp > this.ttlMs) {
+      this.cache.delete(key);
+      return undefined;
+    }
+
+    // Move to end (most recently used) by re-inserting
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    return entry.value;
+  }
+
+  set(key: string, value: string): void {
+    // Delete first if exists (to update position)
+    this.cache.delete(key);
+
+    // Evict oldest entries if at capacity
+    while (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      } else {
+        break;
+      }
+    }
+
+    this.cache.set(key, { value, timestamp: Date.now() });
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  get size(): number {
+    return this.cache.size;
+  }
+}
+
+const translationCache = new LRUTranslationCache(MAX_CACHE_SIZE, CACHE_TTL_MS);
 
 function getCacheKey(text: string, targetLang: string): string {
   return `${text}::${targetLang}`;

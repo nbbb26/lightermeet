@@ -131,7 +131,7 @@ export default function Page() {
       </main>
       <footer data-lk-theme="default">
         Open source video conferencing.{' '}
-        <a href="https://github.com/yourusername/lightermeet" rel="noopener" target="_blank">
+        <a href="https://github.com/nicserv/lightermeet" rel="noopener" target="_blank">
           View on GitHub
         </a>
       </footer>

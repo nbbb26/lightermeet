@@ -1,19 +1,34 @@
 import { EgressClient } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  verifyParticipantToken,
+  unauthorizedResponse,
+  checkRateLimit,
+  rateLimitedResponse,
+} from '@/lib/api-auth';
 
 export async function GET(req: NextRequest) {
   try {
-    const roomName = req.nextUrl.searchParams.get('roomName');
+    // Auth: require valid LiveKit participant token
+    const auth = await verifyParticipantToken(req);
+    if (!auth) {
+      return unauthorizedResponse('Valid participant token required to stop recording');
+    }
 
-    /**
-     * CAUTION:
-     * for simplicity this implementation does not authenticate users and therefore allows anyone with knowledge of a roomName
-     * to start/stop recordings for that room.
-     * DO NOT USE THIS FOR PRODUCTION PURPOSES AS IS
-     */
+    // Rate limit: 5 requests per minute per identity
+    if (!checkRateLimit(`record-stop:${auth.identity}`, 5, 60_000)) {
+      return rateLimitedResponse();
+    }
+
+    const roomName = req.nextUrl.searchParams.get('roomName');
 
     if (roomName === null) {
       return new NextResponse('Missing roomName parameter', { status: 403 });
+    }
+
+    // Verify the user is authorized for this specific room
+    if (auth.roomName && auth.roomName !== roomName) {
+      return unauthorizedResponse('Not authorized for this room');
     }
 
     const { LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL } = process.env;
@@ -30,10 +45,10 @@ export async function GET(req: NextRequest) {
     }
     await Promise.all(activeEgresses.map((info) => egressClient.stopEgress(info.egressId)));
 
+    console.log(`[recording] Stopped by ${auth.identity} for room ${roomName}`);
     return new NextResponse(null, { status: 200 });
   } catch (error) {
-    if (error instanceof Error) {
-      return new NextResponse(error.message, { status: 500 });
-    }
+    console.error('[recording] Stop error:', error);
+    return NextResponse.json({ error: 'Failed to stop recording' }, { status: 500 });
   }
 }

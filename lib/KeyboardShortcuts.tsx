@@ -10,14 +10,23 @@ export function KeyboardShortcuts() {
 
   React.useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
-      // Toggle microphone: Cmd/Ctrl-Shift-A
-      if (toggleMic && event.key === 'A' && (event.ctrlKey || event.metaKey)) {
+      // Toggle microphone: Cmd/Ctrl+Shift+A
+      if (
+        toggleMic &&
+        event.shiftKey &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === 'a'
+      ) {
         event.preventDefault();
         toggleMic();
       }
 
-      // Toggle camera: Cmd/Ctrl-Shift-V
-      if (event.key === 'V' && (event.ctrlKey || event.metaKey)) {
+      // Toggle camera: Cmd/Ctrl+Shift+V
+      if (
+        event.shiftKey &&
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === 'v'
+      ) {
         event.preventDefault();
         toggleCamera();
       }
