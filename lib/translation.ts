@@ -138,7 +138,7 @@ export async function translateText(
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-5.2-nano', // Fast, cheap model for translation
+      model: 'gpt-5-nano', // Fast, cheap model for translation
       messages: [
         {
           role: 'system',
@@ -195,7 +195,7 @@ export async function detectLanguage(text: string): Promise<LanguageCode | null>
   });
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-5.2-nano',
+    model: 'gpt-5-nano',
     messages: [
       {
         role: 'system',
