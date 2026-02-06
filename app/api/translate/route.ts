@@ -78,7 +78,8 @@ export async function POST(request: NextRequest) {
 
     // Multiple translations (for room broadcast)
     if (targetLanguages && Array.isArray(targetLanguages)) {
-      const validLanguages = targetLanguages.filter(
+      // Deduplicate and validate target languages
+      const validLanguages = [...new Set(targetLanguages)].filter(
         (lang): lang is LanguageCode => lang in SUPPORTED_LANGUAGES
       );
 
@@ -89,17 +90,31 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Bound to the number of supported languages to prevent cost amplification
+      const MAX_TARGET_LANGUAGES = Object.keys(SUPPORTED_LANGUAGES).length;
+      if (validLanguages.length > MAX_TARGET_LANGUAGES) {
+        return NextResponse.json(
+          { error: `Too many target languages (max ${MAX_TARGET_LANGUAGES})` },
+          { status: 400 }
+        );
+      }
+
       const translations = await translateForRoom(
         text,
         validLanguages,
         sourceLanguage as LanguageCode | undefined
       );
 
+      // Reuse detected language from translateForRoom to avoid redundant API call (Issue #11)
+      const detectedSource = sourceLanguage || Object.keys(translations).find(
+        (lang) => translations[lang as LanguageCode] === text
+      ) || null;
+
       return NextResponse.json({
         success: true,
         originalText: text,
         translations,
-        sourceLanguage: sourceLanguage || await detectLanguage(text),
+        sourceLanguage: detectedSource,
       });
     }
 

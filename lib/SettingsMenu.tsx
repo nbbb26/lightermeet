@@ -58,24 +58,37 @@ export function SettingsMenu(props: SettingsMenuProps) {
     }
     setProcessingRecRequest(true);
     setInitialRecStatus(isRecording);
-    const headers: Record<string, string> = {};
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-    let response: Response;
-    if (isRecording) {
-      response = await fetch(recordingEndpoint + `/stop?roomName=${room.name}`, { headers });
-    } else {
-      response = await fetch(recordingEndpoint + `/start?roomName=${room.name}`, { headers });
-    }
-    if (response.ok) {
-    } else {
-      console.error(
-        'Error handling recording request, check server logs:',
-        response.status,
-        response.statusText,
-      );
+
+    // Safety timeout: reset processing state if recording status doesn't change within 15s
+    const safetyTimeout = setTimeout(() => {
       setProcessingRecRequest(false);
+    }, 15_000);
+
+    try {
+      const headers: Record<string, string> = {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      const encodedRoomName = encodeURIComponent(room.name);
+      let response: Response;
+      if (isRecording) {
+        response = await fetch(recordingEndpoint + `/stop?roomName=${encodedRoomName}`, { headers });
+      } else {
+        response = await fetch(recordingEndpoint + `/start?roomName=${encodedRoomName}`, { headers });
+      }
+      if (!response.ok) {
+        console.error(
+          'Error handling recording request, check server logs:',
+          response.status,
+          response.statusText,
+        );
+        setProcessingRecRequest(false);
+      }
+    } catch (error) {
+      console.error('Recording request failed:', error);
+      setProcessingRecRequest(false);
+    } finally {
+      clearTimeout(safetyTimeout);
     }
   };
 

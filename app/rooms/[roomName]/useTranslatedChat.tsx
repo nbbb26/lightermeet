@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { formatChatMessageLinks, useChat, useMaybeRoomContext } from '@livekit/components-react';
 import { LanguageCode } from '@/lib/translation';
 import type { ReceivedChatMessage } from '@livekit/components-react';
@@ -13,18 +13,23 @@ interface TranslatedMessage {
 }
 
 /**
- * Generate a stable composite key for a chat message.
- * Uses identity + timestamp + text hash to handle duplicates.
+ * Get a stable unique key for a chat message.
+ * Prefers the SDK-provided `id` field for stable identity (handles duplicates
+ * and reordering correctly). Falls back to composite key for compatibility.
  */
 function getMessageKey(msg: ReceivedChatMessage): string {
+  // The SDK provides a stable unique `id` per message — use it when available
+  if (msg.id) {
+    return msg.id;
+  }
+  // Fallback: composite key from identity + timestamp + text hash
   const identity = msg.from?.identity ?? 'unknown';
-  // Simple hash of message text for uniqueness
   let hash = 0;
   const text = msg.message ?? '';
   for (let i = 0; i < text.length; i++) {
     const char = text.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0;
   }
   return `${identity}:${msg.timestamp}:${hash}`;
 }
@@ -152,14 +157,18 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true, pa
     });
   }, [chatMessages, enabled, room, userLanguage, participantToken]);
 
-  // Build a reverse index: message text -> list of TranslatedMessage entries (ordered by timestamp)
-  // This handles duplicate messages correctly by consuming matches in order
-  const textToTranslations = useCallback(() => {
+  // Precompute reverse index once per translatedMessages change: O(n) build, O(1) lookup
+  // Maps message text -> list of TranslatedMessage entries (ordered by message id for stability)
+  const textToTranslationsIndex = useMemo(() => {
     const index = new Map<string, TranslatedMessage[]>();
-    // Sort entries by timestamp to maintain consistent ordering
-    const entries = Array.from(translatedMessages.values()).sort(
-      (a, b) => a.originalMessage.timestamp - b.originalMessage.timestamp
-    );
+    // Sort by stable message id first, then timestamp as tiebreaker
+    // This ensures consistent ordering even if messages are reordered in the list
+    const entries = Array.from(translatedMessages.values()).sort((a, b) => {
+      const idA = a.originalMessage.id ?? '';
+      const idB = b.originalMessage.id ?? '';
+      if (idA && idB) return idA.localeCompare(idB);
+      return a.originalMessage.timestamp - b.originalMessage.timestamp;
+    });
     for (const entry of entries) {
       const text = entry.originalMessage.message ?? '';
       const list = index.get(text) ?? [];
@@ -174,8 +183,7 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true, pa
 
   // Message formatter for VideoConference component
   const messageFormatter = useCallback((message: string) => {
-    const index = textToTranslations();
-    const matches = index.get(message);
+    const matches = textToTranslationsIndex.get(message);
     
     // Get the next unrendered match for this text (handles duplicates)
     const renderCount = renderCounterRef.current.get(message) ?? 0;
@@ -251,7 +259,7 @@ export function useTranslatedChat(userLanguage: LanguageCode, enabled = true, pa
 
     // No translation needed (message is already in target language)
     return formatChatMessageLinks(message);
-  }, [textToTranslations]);
+  }, [textToTranslationsIndex]);
 
   return messageFormatter;
 }

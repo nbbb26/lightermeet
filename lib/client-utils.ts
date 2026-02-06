@@ -11,12 +11,22 @@ export function generateRoomId(): string {
 }
 
 export function randomString(length: number): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const charCount = chars.length; // 36
+  const maxValidByte = 256 - (256 % charCount); // 252 — avoids modulo bias
+
   let result = '';
-  const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  const charactersLength = characters.length;
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  const bytes = new Uint8Array(length * 2);
+
+  while (result.length < length) {
+    crypto.getRandomValues(bytes);
+    for (let i = 0; i < bytes.length && result.length < length; i++) {
+      if (bytes[i] < maxValidByte) {
+        result += chars[bytes[i] % charCount];
+      }
+    }
   }
+
   return result;
 }
 

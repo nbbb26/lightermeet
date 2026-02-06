@@ -97,8 +97,8 @@ class LRUTranslationCache {
 
 const translationCache = new LRUTranslationCache(MAX_CACHE_SIZE, CACHE_TTL_MS);
 
-function getCacheKey(text: string, targetLang: string): string {
-  return `${text}::${targetLang}`;
+function getCacheKey(text: string, targetLang: string, sourceLang?: string): string {
+  return `${sourceLang ?? 'auto'}::${text}::${targetLang}`;
 }
 
 /**
@@ -118,7 +118,7 @@ export async function translateText(
   }
 
   // Check cache first
-  const cacheKey = getCacheKey(text, targetLanguage);
+  const cacheKey = getCacheKey(text, targetLanguage, sourceLanguage);
   const cached = translationCache.get(cacheKey);
   if (cached) {
     return { translatedText: cached, cached: true };
@@ -161,7 +161,7 @@ If the text is already in the target language, return it unchanged.`,
       throw new Error('Empty response from translation API');
     }
 
-    // Cache the result
+    // Cache the result (key includes source language for correctness)
     translationCache.set(cacheKey, translatedText);
 
     return { translatedText };

@@ -15,13 +15,20 @@ declare global {
   }
 }
 
+// Singleton guard: ensure Datadog logger is initialized only once
+let datadogInitialized = false;
+
 export const useDebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
   const room = useRoomContext();
 
   React.useEffect(() => {
     setLogLevel(logLevel ?? 'debug');
 
-    if (process.env.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN && process.env.NEXT_PUBLIC_DATADOG_SITE) {
+    if (
+      !datadogInitialized &&
+      process.env.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN &&
+      process.env.NEXT_PUBLIC_DATADOG_SITE
+    ) {
       console.log('setting up datadog logs');
       datadogLogs.init({
         clientToken: process.env.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN,
@@ -29,6 +36,7 @@ export const useDebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
         forwardErrorsToLogs: true,
         sessionSampleRate: 100,
       });
+      datadogInitialized = true;
 
       setLogExtension((level, msg, context) => {
         switch (level) {

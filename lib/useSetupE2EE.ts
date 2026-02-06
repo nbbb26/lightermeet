@@ -2,8 +2,16 @@ import React from 'react';
 import { decodePassphrase } from './client-utils';
 
 export function useSetupE2EE() {
-  const e2eePassphrase =
-    typeof window !== 'undefined' ? decodePassphrase(location.hash.substring(1)) : undefined;
+  const e2eePassphrase = React.useMemo(() => {
+    if (typeof window === 'undefined') return undefined;
+    try {
+      const hash = location.hash.substring(1);
+      return hash ? decodePassphrase(hash) : undefined;
+    } catch (e) {
+      console.error('Failed to decode E2EE passphrase from URL hash:', e);
+      return undefined;
+    }
+  }, []);
 
   // Issue #4: Create worker with useMemo to avoid re-creating on every render
   const worker = React.useMemo(() => {

@@ -23,7 +23,10 @@ export function MicrophoneSettings() {
 
   React.useEffect(() => {
     // enable Krisp by default on non-low power devices
+    // setNoiseFilterEnabled is stable (from hook) — intentionally omitted from deps
+    // to only run on mount
     setNoiseFilterEnabled(!isLowPowerDevice());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <div
