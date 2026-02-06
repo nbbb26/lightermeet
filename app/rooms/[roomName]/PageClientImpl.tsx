@@ -295,12 +295,6 @@ function VideoConferenceComponent(props: {
   ]);
 
   const lowPowerMode = useLowCPUOptimizer(room);
-  // Pass participant token to useTranslatedChat for authenticated API calls
-  const translatedChatFormatter = useTranslatedChat(
-    props.userLanguage,
-    true,
-    props.connectionDetails.participantToken,
-  );
 
   // Issue #4: Cleanup worker on unmount
   React.useEffect(() => {
@@ -322,21 +316,49 @@ function VideoConferenceComponent(props: {
       <AuthTokenProvider token={props.connectionDetails.participantToken}>
         <RoomContext.Provider value={room}>
           <KeyboardShortcuts />
-          <VideoConference
-            chatMessageFormatter={translatedChatFormatter}
-            SettingsComponent={SHOW_SETTINGS_MENU ? SettingsMenu : undefined}
+          {/* RoomInner must be a child component so useChat() can access RoomContext */}
+          <RoomInner
+            userLanguage={props.userLanguage}
+            onLanguageChange={props.onLanguageChange}
+            participantToken={props.connectionDetails.participantToken}
           />
           <DebugMode />
-          <RecordingIndicator />
-          {/* Language selector overlay */}
-          <div className="lightermeet-language-overlay">
-            <LanguageSelector 
-              value={props.userLanguage} 
-              onChange={props.onLanguageChange}
-            />
-          </div>
         </RoomContext.Provider>
       </AuthTokenProvider>
     </div>
+  );
+}
+
+/**
+ * Inner component that lives inside RoomContext.Provider.
+ * useTranslatedChat calls useChat() which requires RoomContext,
+ * so it must be called from a child of the Provider, not the same component.
+ */
+function RoomInner(props: {
+  userLanguage: LanguageCode;
+  onLanguageChange: (lang: LanguageCode) => void;
+  participantToken?: string;
+}) {
+  const translatedChatFormatter = useTranslatedChat(
+    props.userLanguage,
+    true,
+    props.participantToken,
+  );
+
+  return (
+    <>
+      <VideoConference
+        chatMessageFormatter={translatedChatFormatter}
+        SettingsComponent={SHOW_SETTINGS_MENU ? SettingsMenu : undefined}
+      />
+      <RecordingIndicator />
+      {/* Language selector overlay */}
+      <div className="lightermeet-language-overlay">
+        <LanguageSelector 
+          value={props.userLanguage} 
+          onChange={props.onLanguageChange}
+        />
+      </div>
+    </>
   );
 }
