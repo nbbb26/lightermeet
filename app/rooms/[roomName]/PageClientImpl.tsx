@@ -33,6 +33,7 @@ import { useLowCPUOptimizer } from '@/lib/usePerfomanceOptimiser';
 import { LanguageSelector } from '@/app/components/TranslatedChat';
 import { LanguageCode } from '@/lib/translation';
 import { useTranslatedChat } from './useTranslatedChat';
+import { MobileVideoConference } from '@/app/components/MobileVideoConference';
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? '/api/connection-details';
@@ -330,20 +331,58 @@ function VideoConferenceComponent(props: {
 }
 
 /**
+ * Hook to detect mobile viewport (matches CSS breakpoint at 600px)
+ */
+function useIsMobile(breakpoint = 600) {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
+/**
  * Inner component that lives inside RoomContext.Provider.
  * useTranslatedChat calls useChat() which requires RoomContext,
  * so it must be called from a child of the Provider, not the same component.
+ * 
+ * On mobile (≤600px), renders custom MobileVideoConference for:
+ * - True fullscreen video mode
+ * - Collapsible toolbar
+ * - Toast-style chat notifications + expandable chat overlay
+ * 
+ * On desktop, keeps the standard VideoConference prefab.
  */
 function RoomInner(props: {
   userLanguage: LanguageCode;
   onLanguageChange: (lang: LanguageCode) => void;
   participantToken?: string;
 }) {
+  const isMobile = useIsMobile();
   const translatedChatFormatter = useTranslatedChat(
     props.userLanguage,
     true,
     props.participantToken,
   );
+
+  if (isMobile) {
+    return (
+      <>
+        <MobileVideoConference
+          chatMessageFormatter={translatedChatFormatter}
+          userLanguage={props.userLanguage}
+          onLanguageChange={props.onLanguageChange}
+        />
+        <RecordingIndicator />
+      </>
+    );
+  }
 
   return (
     <>

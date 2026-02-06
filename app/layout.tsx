@@ -2,6 +2,7 @@ import '../styles/globals.css';
 import '@livekit/components-styles';
 import '@livekit/components-styles/prefabs';
 import '../styles/lightermeet-custom.css';
+import '../styles/mobile-conference.css';
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from 'react-hot-toast';
 

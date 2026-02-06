@@ -1,0 +1,659 @@
+/* ============================================
+   MOBILE VIDEO CONFERENCE — Custom Layout
+   Only applies to the MobileVideoConference component
+   ============================================ */
+
+/* ===== Base Container ===== */
+.mobile-conference {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a0a;
+  touch-action: manipulation;
+}
+
+/* ===== Video Layer ===== */
+.mobile-video-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Grid layout - fills viewport */
+.mobile-grid-layout {
+  width: 100%;
+  height: 100%;
+}
+
+.mobile-grid-layout .lk-grid-layout {
+  padding: 2px !important;
+  gap: 2px !important;
+}
+
+/* Focus layout */
+.mobile-focus-layout {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-focus-main {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.mobile-focus-main .lk-participant-tile {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+}
+
+/* Carousel at bottom */
+.mobile-focus-carousel {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  height: 100px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobile-focus-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-carousel-item {
+  flex: 0 0 auto;
+  width: 130px;
+  height: 92px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.mobile-carousel-item:active {
+  border-color: var(--lk-accent-bg, #2196f3);
+}
+
+.mobile-carousel-item .lk-participant-tile {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Unfocus button */
+.mobile-unfocus-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.mobile-unfocus-btn:active {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* ===== Immersive Fullscreen (via CSS class, no duplicate ParticipantTile) ===== */
+
+/* When fullscreen, the container covers entire viewport */
+.mobile-conference--fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  padding-top: 0 !important;
+}
+
+.mobile-video-layer--fullscreen {
+  z-index: 9999;
+}
+
+/* Focus layout in fullscreen — single video fills everything */
+.mobile-focus-layout--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+}
+
+.mobile-focus-main--fullscreen {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mobile-focus-main--fullscreen .lk-participant-tile {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+}
+
+/* Hide participant metadata in fullscreen for max video */
+.mobile-focus-main--fullscreen .lk-participant-metadata {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Close button (used in fullscreen) */
+.mobile-fullscreen-close {
+  position: fixed;
+  top: max(env(safe-area-inset-top, 12px), 12px);
+  right: 12px;
+  z-index: 10001;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.mobile-fullscreen-close:active {
+  transform: scale(0.9);
+  background: rgba(255, 60, 60, 0.6);
+}
+
+/* Fullscreen toolbar */
+.mobile-fullscreen-toolbar {
+  position: fixed;
+  bottom: max(env(safe-area-inset-bottom, 20px), 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  display: flex;
+  gap: 12px;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.mobile-fullscreen-toolbar.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.mobile-fullscreen-toolbar.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px);
+  pointer-events: none;
+}
+
+.mobile-fullscreen-toolbar .lk-button {
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+
+/* ===== Chat Toast Messages ===== */
+.mobile-chat-toasts {
+  position: absolute;
+  bottom: 80px;
+  left: 8px;
+  right: 8px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.mobile-chat-toast {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  color: white;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: toastSlideIn 0.3s ease-out, toastFadeOut 0.5s ease-in 3.5s forwards;
+  max-width: 85%;
+}
+
+.mobile-toast-sender {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mobile-toast-text {
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.95);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ===== Expanded Chat Overlay ===== */
+.mobile-chat-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 10, 10, 0.65);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  animation: chatOverlayIn 0.25s ease-out;
+}
+
+@keyframes chatOverlayIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Chat header */
+.mobile-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  padding-top: max(env(safe-area-inset-top, 12px), 12px);
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.mobile-chat-header span {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.02em;
+}
+
+.mobile-chat-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mobile-chat-close:active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+/* Chat messages area */
+.mobile-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.mobile-chat-messages::-webkit-scrollbar {
+  width: 3px;
+}
+
+.mobile-chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mobile-chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+/* Empty chat state */
+.mobile-chat-empty {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
+  padding: 2rem 1rem;
+  font-style: italic;
+}
+
+/* Chat entries */
+.mobile-chat-entry {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+  animation: msgAppear 0.2s ease-out;
+}
+
+.mobile-chat-entry.local {
+  align-self: flex-end;
+}
+
+.mobile-chat-entry.remote {
+  align-self: flex-start;
+}
+
+@keyframes msgAppear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mobile-chat-sender {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 2px;
+  padding-left: 4px;
+}
+
+.mobile-chat-bubble {
+  padding: 8px 12px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.mobile-chat-entry.local .mobile-chat-bubble {
+  background: rgba(33, 150, 243, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.mobile-chat-entry.remote .mobile-chat-bubble {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.95);
+  border-bottom-left-radius: 4px;
+}
+
+.mobile-chat-time {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 2px;
+  padding: 0 4px;
+}
+
+.mobile-chat-entry.local .mobile-chat-time {
+  text-align: right;
+}
+
+/* Chat input form */
+.mobile-chat-input-form {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  padding-bottom: max(env(safe-area-inset-bottom, 10px), 10px);
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.mobile-chat-input {
+  flex: 1;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: white;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.mobile-chat-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.mobile-chat-input:focus {
+  border-color: rgba(33, 150, 243, 0.5);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.mobile-chat-send {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lk-accent-bg, #2196f3);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.mobile-chat-send:active {
+  transform: scale(0.9);
+  background: #1976d2;
+}
+
+/* ===== Bottom Toolbar ===== */
+.mobile-toolbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  padding: 8px 12px;
+  padding-bottom: max(env(safe-area-inset-bottom, 8px), 8px);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.mobile-toolbar.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-toolbar.hidden {
+  opacity: 0;
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+.mobile-toolbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mobile-toolbar-inner .lk-button {
+  min-width: 48px !important;
+  min-height: 48px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  transition: background 0.2s, transform 0.15s !important;
+}
+
+.mobile-toolbar-inner .lk-button:active {
+  transform: scale(0.92) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.mobile-toolbar-inner .lk-disconnect-button {
+  background: rgba(255, 60, 60, 0.75) !important;
+  border-color: rgba(255, 60, 60, 0.3) !important;
+}
+
+.mobile-toolbar-inner .lk-disconnect-button:active {
+  background: rgba(255, 60, 60, 0.9) !important;
+}
+
+/* Chat toggle in toolbar */
+.mobile-chat-toggle {
+  position: relative;
+}
+
+.mobile-chat-toggle.active {
+  background: rgba(33, 150, 243, 0.4) !important;
+  border-color: rgba(33, 150, 243, 0.3) !important;
+}
+
+.mobile-chat-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: #2196f3;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.5);
+}
+
+/* Language selector in toolbar */
+.mobile-toolbar-language {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mobile-toolbar-language .language-selector {
+  gap: 4px;
+}
+
+.mobile-toolbar-language .language-selector label {
+  display: none;
+}
+
+.mobile-toolbar-language .language-selector select {
+  min-width: 110px;
+  font-size: 0.8rem;
+  padding: 4px 8px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px;
+}
+
+/* Show toolbar button (chevron at bottom) */
+.mobile-toolbar-show-btn {
+  position: absolute;
+  bottom: max(env(safe-area-inset-bottom, 4px), 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  width: 48px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px 14px 0 0;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: background 0.2s;
+  animation: pulseUp 2s ease-in-out infinite;
+}
+
+.mobile-toolbar-show-btn:active {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+@keyframes pulseUp {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-3px); }
+}
+
+/* ===== Participant tile overrides in mobile-conference ===== */
+.mobile-conference .lk-participant-tile {
+  border-radius: 4px !important;
+  overflow: hidden !important;
+}
+
+.mobile-conference .lk-participant-name {
+  font-size: 0.72rem !important;
+}
+
+.mobile-conference .lk-focus-toggle-button {
+  display: none !important;
+}
+
+/* ===== SafeArea / Notch handling ===== */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .mobile-conference {
+    padding-top: env(safe-area-inset-top);
+  }
+}
